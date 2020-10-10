@@ -171,7 +171,7 @@ simulated_annealing_grid = {
         'init_temp': (np.logspace(-3, 4, 20), 'log'),
         'decay': (1-np.logspace(-0.01, -3.5, 20), 'log'),
         'min_temp': (np.logspace(-1, -7, 20), 'log'),
-        'clip_max': (np.logspace(1, 10, 20), 'log'),
+        'clip_max': (np.logspace(1, 10, 10), 'log'),
         }
 
 rhc_grid = {
@@ -185,8 +185,8 @@ genetic_grid = {
         'learning_rate': (np.logspace(start=3, stop=-7, num=20), 'log'),
         'pop_size': (range(50, 701, 50), 'linear'),
         #'mutation_prob': (np.logspace(-2, -0.1, 40), 'log'),
-        'mutation_prob': (np.linspace(0.1, 0.5, 40), 'linear'),
-        'max_attempts': (range(1, 101, 2), 'linear'),
+        'mutation_prob': (np.linspace(0.1, 0.5, 10), 'linear'),
+        'max_attempts': (range(1, 101, 10), 'linear'),
         'clip_max': (np.logspace(-3, 3, 20), 'log'),
         }
 
@@ -299,8 +299,9 @@ def run_fitness_over_param_grid(algorithm, problem):
         fig, ax1 = plt.subplots()
         color = 'tab:red'
         best = x[np.argmax(scores)]
+        best_value = algorithm.default_args[param_key]
         ax1.set_title('%s - %s (%s)' % (problem.name, algorithm.name, param_key))
-        ax1.set_xlabel('%s' % (param_key))
+        ax1.set_xlabel('%s (best=%s)' % (param_key, best_value))
         ax1.set_ylabel('Balanced Accuracy (best=%s)' % (best_param_string(best, scale)), color=color)
         ax1.plot(x, scores, linewidth=LINE_WIDTH, markersize=LINE_WIDTH, color=color, label='Balanced Accuracy')
         ax1.plot(x, sensitivity_scores, linewidth=1, markersize=1, linestyle="--", color=color, label='Sensitivity')
@@ -308,7 +309,6 @@ def run_fitness_over_param_grid(algorithm, problem):
         #ax1.fill_between(x, means + stds, means - stds, alpha=0.15, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
         ax1.legend()
-        best_value = algorithm.default_args[param_key]
         ax1.axvline(x=best_value, linestyle='--', linewidth=1, color='black')
         ax1.set_ylim([0, 1.03])
 
