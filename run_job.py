@@ -33,7 +33,7 @@ class NamedGeomDecay(mlrose.GeomDecay):
     def __init__(self, **kwargs):
         self.kwargs = kwargs
         mlrose.GeomDecay.__init__(self, **kwargs)
-    
+
     def __repr__(self):
         return str(self.kwargs)
 
@@ -54,18 +54,18 @@ class Algorithm:
         if schedule_args:
             args['schedule'] = NamedGeomDecay(**schedule_args)
         return self.algorithm(problem, **args)
-    
+
     def pop_size(self):
         if 'pop_size' in self.default_args:
             return self.default_args['pop_size']
         return 1
-    
+
     def __repr__(self):
         return "%s" % (self.name)
-    
+
     def __getstate__(self):
         return (self.name, self.algorithm.__name__, self.param_grid, self.default_args)
-    
+
     def __setstate__(self, state):
         algorithm = getattr(mlrose, state[1])
         Algorithm.__init__(self, state[0], algorithm, state[2], **state[3])
@@ -100,12 +100,12 @@ mimic_grid = {
         }
 
 ALGORITHMS = [
-    Algorithm('Random Hill Climb', mlrose.random_hill_climb, rhc_grid,
+    Algorithm('RHC', mlrose.random_hill_climb, rhc_grid,
               max_iters=MAX_ITERS, max_attempts=40, restarts=20),
-    Algorithm('Simulated Annealing', mlrose.simulated_annealing, simulated_annealing_grid,
+    Algorithm('SA', mlrose.simulated_annealing, simulated_annealing_grid,
                                      init_temp=1.0, decay=1e-4, min_temp=0.001, max_attempts=40,
                                      max_iters=MAX_ITERS),
-    Algorithm('Genetic Alg', mlrose.genetic_alg, genetic_grid, max_iters=MAX_ITERS/250,
+    Algorithm('GA', mlrose.genetic_alg, genetic_grid, max_iters=MAX_ITERS/250,
               max_attempts=40, pop_size=200, mutation_prob=0.1),
     Algorithm('MIMIC', mlrose.mimic, mimic_grid, max_iters=MAX_ITERS/350, keep_pct=0.20,
               max_attempts=40, pop_size=700),
@@ -194,7 +194,7 @@ def instance(problem, length):
     fitness, normalization = fn(length)
     problem.fitness = FitnessCounter(fitness)
     return problem.opt(length=length, fitness_fn=problem.fitness, maximize=True), normalization
-    
+
 
 FITNESS_FNS = [
     Fitness('Traveling Sales', 'travelling_sales', mlrose.TSPOpt),
@@ -214,9 +214,9 @@ def run_iteration(i, problem_name, length, algorithm_name, **kwargs):
         for j in range(len(ALGORITHMS)):
             if ALGORITHMS[j].name == algorithm_name:
                 algorithm = ALGORITHMS[j]
-        
+
         opt, normalization = instance(problem, length)
-        if algorithm.name == 'MIMIC':
+        if algorithm_name == 'MIMIC':
             #kwargs['fast_mimic'] = True
             #kwargs['fast_mimic'] = (problem.name != 'Traveling Sales')
             #opt.set_mimic_fast_mode(problem.name != 'Traveling Sales')

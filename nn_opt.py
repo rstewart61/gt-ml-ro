@@ -196,15 +196,15 @@ gradient_descent_grid = {
         }
 
 ALGORITHMS = [
-    Algorithm('Gradient Descent', 'gradient_descent', gradient_descent_grid,
+    Algorithm('GD', 'gradient_descent', gradient_descent_grid,
               learning_rate = 1.4e-4, max_iters=MAX_ITERS, clip_max=1e3),
-    Algorithm('Random Hill Climb', 'random_hill_climb', rhc_grid,
+    Algorithm('RHC', 'random_hill_climb', rhc_grid,
               max_iters=MAX_ITERS, max_attempts=20, restarts=10,
               learning_rate = 2.5, clip_max=1e3),
-    Algorithm('Simulated Annealing', 'simulated_annealing', simulated_annealing_grid,
+    Algorithm('SA', 'simulated_annealing', simulated_annealing_grid,
               learning_rate = 2, schedule=mlrose.GeomDecay(), max_attempts=30,
               max_iters=MAX_ITERS, clip_max=1e3, init_temp=1, decay=1-0.01, min_temp=3.36e-5),
-    Algorithm('Genetic Alg', 'genetic_alg', genetic_grid, max_iters=400,
+    Algorithm('GA', 'genetic_alg', genetic_grid, max_iters=400,
               learning_rate = 0.01, max_attempts=10, clip_max=0.1),
 ]
 
@@ -256,21 +256,22 @@ def run_fitness_by_param(algorithm, problem, param_key, param_values):
     scores = []
     sensitivity_scores = []
     specificity_scores = []
+    num_runs = 3
     for i in range(num_points):
         args = {param_key: x[i]}
         print("%s %s=%s" % (algorithm, param_key, x[i]))
-        iter_losses = np.zeros((RUNS_PER_ALGO))
-        iter_train_scores = np.zeros((RUNS_PER_ALGO))
-        iter_scores = np.zeros((RUNS_PER_ALGO))
-        iter_sensitivity_scores = np.zeros((RUNS_PER_ALGO))
-        iter_specificity_scores = np.zeros((RUNS_PER_ALGO))
-        for j in range(RUNS_PER_ALGO):
+        iter_losses = np.zeros((num_runs))
+        iter_train_scores = np.zeros((num_runs))
+        iter_scores = np.zeros((num_runs))
+        iter_sensitivity_scores = np.zeros((num_runs))
+        iter_specificity_scores = np.zeros((num_runs))
+        for j in range(num_runs):
             iter_losses[j], iter_train_scores[j], iter_sensitivity_scores[j], iter_specificity_scores[j], \
                 iter_scores[j], _, _ = run_nn(algorithm, problem, random_state=RANDOM_STATE + j, **args)
-        losses.append(np.mean(iter_losses))
-        scores.append(np.mean(iter_train_scores))
-        sensitivity_scores.append(np.mean(iter_sensitivity_scores))
-        specificity_scores.append(np.mean(iter_specificity_scores))
+        losses.append(np.median(iter_losses))
+        scores.append(np.median(iter_train_scores))
+        sensitivity_scores.append(np.median(iter_sensitivity_scores))
+        specificity_scores.append(np.median(iter_specificity_scores))
     return x, losses, scores, sensitivity_scores, specificity_scores
 
 def best_param_string(value, scale):
@@ -307,6 +308,8 @@ def run_fitness_over_param_grid(algorithm, problem):
         #ax1.fill_between(x, means + stds, means - stds, alpha=0.15, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
         ax1.legend()
+        best_value = algorithm.default_args[param_key]
+        ax1.axvline(x=best_value, linestyle='--', linewidth=1, color='black')
         ax1.set_ylim([0, 1.03])
 
         ax2 = ax1.twinx()
@@ -337,8 +340,11 @@ def plot_by_iteration(fig, problem, algorithm):
         timings[i] = timing
     max_len = max([len(curve) for curve in curves])
     results = np.zeros((RUNS_PER_ALGO, max_len))
+    multiplier = 1
+    if algorithm.algorithm == 'gradient_descent':
+        multiplier = -1
     for i in range(RUNS_PER_ALGO):
-        results[i, :len(curves[i])] = -np.array(curves[i])
+        results[i, :len(curves[i])] = multiplier * np.array(curves[i])
     means = np.mean(results, axis=0)
     stds = np.std(results, axis=0)
     x = np.arange(max_len)
@@ -448,7 +454,7 @@ if __name__ == "__main__":
     algorithm_names = [algorithm.name for algorithm in ALGORITHMS]
     simple_bar_chart(algorithm_names, np.mean(timings, axis=1), np.std(timings, axis=1))
     plt.title('%s convergence time' % (problem.name))
-    plt.ylabel('Algorithm')
+    #plt.ylabel('Algorithm')
     plt.xlabel('Time (s)')
     plt.gcf().set_size_inches(FIG_WIDTH, FIG_HEIGHT)
     plt.savefig('plots/nn/%s_%s.png' % (problem.name, 'convergence_times'), bbox_inches='tight')

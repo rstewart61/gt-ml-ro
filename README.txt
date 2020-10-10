@@ -15,3 +15,4 @@ python3 nn_opt.py
 
 # If you have ImageMagick, plots can be glued together with
 ./glue_plots.sh
+
