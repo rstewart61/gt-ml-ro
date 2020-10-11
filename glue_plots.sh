@@ -1,11 +1,11 @@
 #!/bin/bash
 
-montage -mode concatenate tuning_plots/MIMIC* tuning_plots/Genetic* tuning_plots/Simulated* tuning_plots/Random* -tile 3x4 tuning_plots/montage.png
+montage -mode concatenate tuning_plots/MIMIC* tuning_plots/GA* tuning_plots/SA* tuning_plots/RHC* -tile 3x4 tuning_plots/montage.png
 
 montage -mode concatenate tuning_plots/nn/Polish* -tile 3x6 tuning_plots/nn/montage.png
 
 
-for problem in "Continuous Peaks" "Four Peaks" Knapsack "Max K-Color" "Travelling Sales"; do
+for problem in "Continuous Peaks" "Four Peaks" Knapsack "Max K-Color" "Traveling Sales"; do
     LEFT=plots/"${problem}_Fitness by Function Calls*.png"
     RIGHT=plots/"${problem}_Fitness by Iterations*.png"
     echo "$problem"
@@ -24,4 +24,10 @@ convert +append "$LEFT" "$RIGHT" tuning_plots/"_MIMIC_pop_size_Traveling Sales v
 LEFT=plots/nn/"Polish Bankruptcy_bar.png"
 RIGHT=plots/nn/"Polish Bankruptcy_iterations.png"
 convert +append "$LEFT" "$RIGHT" plots/nn/"Polish Bankruptcy_combined.png"
+
+convert +append plots/*convergence_times.png plots/convergence_times_combined.png
+
+LEFT=tuning_plots/nn/"Polish Bankruptcy_RHC_restarts.png"
+RIGHT=tuning_plots/nn/"Polish Bankruptcy_RHC_max_attempts.png"
+convert +append "$LEFT" "$RIGHT" tuning_plots/nn/"_Polish Bankruptcy_RHC_restarts_and_max_attempts.png"
 

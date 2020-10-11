@@ -28,12 +28,10 @@ SIZE_LIMIT = 2000
 MAX_ITERS = 4000
 LINE_WIDTH = 3
 RUNS_PER_ALGO = 10
-FIG_WIDTH = 4
-FIG_HEIGHT = 3
+FIG_WIDTH = 6
+FIG_HEIGHT = 4
 fig_num = 0
 
-# TODO: Write report while generating results.
-# TODO: Plot times
 # TODO: Improve initial weights
 
 #pd.set_option('display.max_columns', None)
@@ -183,10 +181,10 @@ rhc_grid = {
 
 genetic_grid = {
         'learning_rate': (np.logspace(start=3, stop=-7, num=20), 'log'),
-        'pop_size': (range(50, 701, 50), 'linear'),
+        'pop_size': (range(50, 401, 50), 'linear'),
         #'mutation_prob': (np.logspace(-2, -0.1, 40), 'log'),
-        'mutation_prob': (np.linspace(0.1, 0.5, 10), 'linear'),
-        'max_attempts': (range(1, 101, 10), 'linear'),
+        'mutation_prob': (np.linspace(0.05, 0.5, 10), 'linear'),
+        'max_attempts': (range(1, 51, 5), 'linear'),
         'clip_max': (np.logspace(-3, 3, 20), 'log'),
         }
 
@@ -204,8 +202,10 @@ ALGORITHMS = [
     Algorithm('SA', 'simulated_annealing', simulated_annealing_grid,
               learning_rate = 2, schedule=mlrose.GeomDecay(), max_attempts=30,
               max_iters=MAX_ITERS, clip_max=1e3, init_temp=1, decay=1-0.01, min_temp=3.36e-5),
-    Algorithm('GA', 'genetic_alg', genetic_grid, max_iters=400,
-              learning_rate = 0.01, max_attempts=10, clip_max=0.1),
+    Algorithm('GA', 'genetic_alg', genetic_grid, max_iters=400, mutation_prob=0.1,
+              learning_rate = 0.01, max_attempts=10, clip_max=0.7, pop_size=200),
+    #Algorithm('GA', 'genetic_alg', genetic_grid, max_iters=400,
+    #          learning_rate = 0.01, max_attempts=10, clip_max=0.1),
 ]
 
 def train_nn(X_train, y_train, **kwargs):
@@ -291,39 +291,52 @@ def run_fitness_over_param_grid(algorithm, problem):
         print('\tStarting %s' % (param_key))
         x, losses, scores, sensitivity_scores, specificity_scores = run_fitness_by_param(algorithm, problem, param_key, param_values)
         print('\tFinished %s' % (param_key))
+        
+        if param_key == 'mutation_prob':
+            best_value = 0.1
+        elif param_key == 'pop_size':
+            best_value = 200
+        else:
+            best_value = algorithm.default_args[param_key]
         if param_key == 'decay':
             x = 1 - x
+            best_value = 1 - best_value
             param_key = '1 - decay'
 
         # https://matplotlib.org/gallery/api/two_scales.html
         fig, ax1 = plt.subplots()
         color = 'tab:red'
         best = x[np.argmax(scores)]
-        best_value = algorithm.default_args[param_key]
         ax1.set_title('%s - %s (%s)' % (problem.name, algorithm.name, param_key))
         ax1.set_xlabel('%s (best=%s)' % (param_key, best_value))
-        ax1.set_ylabel('Balanced Accuracy (best=%s)' % (best_param_string(best, scale)), color=color)
+        #ax1.set_ylabel('Balanced Accuracy (best=%s)' % (best_param_string(best, scale)), color=color)
+        ax1.set_ylabel('Balanced Accuracy', color=color)
         ax1.plot(x, scores, linewidth=LINE_WIDTH, markersize=LINE_WIDTH, color=color, label='Balanced Accuracy')
         ax1.plot(x, sensitivity_scores, linewidth=1, markersize=1, linestyle="--", color=color, label='Sensitivity')
         ax1.plot(x, specificity_scores, linewidth=1, markersize=1, linestyle=":", color=color, label='Specificity')
         #ax1.fill_between(x, means + stds, means - stds, alpha=0.15, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
+        ax1.set_zorder(1)
+        ax1.set_frame_on(False)
         ax1.legend()
         ax1.axvline(x=best_value, linestyle='--', linewidth=1, color='black')
+        ax1.tick_params(axis='x', which='major', labelsize=12)
         ax1.set_ylim([0, 1.03])
 
         ax2 = ax1.twinx()
         color = 'tab:blue';
         best = x[np.argmin(losses)]
-        ax2.set_ylabel('Log Loss (best=%s)' % (best_param_string(best, scale)), color=color)
+        #ax2.set_ylabel('Log Loss (best=%s)' % (best_param_string(best, scale)), color=color)
+        ax2.set_ylabel('Log Loss', color=color)
         ax2.plot(x, -np.array(losses), linewidth=LINE_WIDTH, markersize=LINE_WIDTH, color=color)
         #ax2.fill_between(x, fn_means + fn_stds, fn_means - fn_stds, alpha=0.15, color=color)
         ax2.tick_params(axis='y', labelcolor=color)
         ax2.set_ylim([min(-2.0, -max(losses) * 1.03), 0])
+        ax2.set_frame_on(True)
 
         #plt.grid()
         plt.xscale(scale)
-        plt.gcf().set_size_inches(FIG_WIDTH, FIG_HEIGHT)
+        plt.gcf().set_size_inches(4, 3)
         plt.savefig('tuning_plots/nn/%s_%s_%s.png' % (problem.name, algorithm.name, param_key), bbox_inches='tight')
         plt.close()
 
@@ -349,8 +362,11 @@ def plot_by_iteration(fig, problem, algorithm):
     stds = np.std(results, axis=0)
     x = np.arange(max_len)
     plt.figure(fig.number)
-    plt.plot(x, means, linewidth=LINE_WIDTH, markersize=LINE_WIDTH, label=algorithm.name)
+    p = plt.plot(x, means, linewidth=LINE_WIDTH, markersize=LINE_WIDTH, label=algorithm.name)
     plt.fill_between(x, means + stds, means - stds, alpha=0.15)
+    # Hack, hard coding MAX_ITERS to avoid a lot of refactoring
+    plt.gca().hlines(y=means[-1], xmin=x[-1], xmax=MAX_ITERS, linestyle=':', linewidths=LINE_WIDTH,
+           colors=p[-1].get_color())
     plt.xlabel('Number of iterations')
     plt.ylabel('Log loss')
     return train_scores, test_scores, timings

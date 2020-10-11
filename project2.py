@@ -63,6 +63,7 @@ def run_length_iteration(problem, length, algorithm, **kwargs):
     results = np.array([result[2] for result in results])
     timings = np.array([result[4] for result in results])
     return_value = fitnesses, fn_calls, results, iters, timings
+    print("Time taken: %s +/- %s" % (np.mean(timings), np.std(timings)))
     print("Saving %s" % (file_name))
     dump(return_value, file_name, compress=3)
     return return_value
@@ -148,9 +149,9 @@ def run_fitness_over_param_grid(length, algorithm):
         else:
             best_value = algorithm.default_args[param_key]
         param_ax1.set_xlabel('%s (best=%s)' % (param_label, best_value))
-        param_ax1.set_ylabel('Avg Fitness % +/- Std Dev (solid line)')
+        param_ax1.set_ylabel('Avg Fitness % +/- Std (solid line)')
         param_ax2 = param_ax1.twinx()
-        param_ax2.set_ylabel('Count of Function Calls (dashed line)')
+        param_ax2.set_ylabel('Thousands of Function Calls (dashed line)')
 
         for problem in FITNESS_FNS:
             print('\tStarting %s' % (param_label))
@@ -160,6 +161,7 @@ def run_fitness_over_param_grid(length, algorithm):
                 x = 1 - x
             means = np.mean(y, axis=1)
             stds = np.std(y, axis=1)
+            fn_calls = np.array(fn_calls) / 1000.0
             fn_means = np.mean(fn_calls, axis=1)
             fn_stds = np.std(fn_calls, axis=1)
 
@@ -174,15 +176,16 @@ def run_fitness_over_param_grid(length, algorithm):
             color = 'tab:red'
             ax1.set_title('%s - %s length=%s (%s)' % (problem.name, algorithm.name, length, param_label))
             ax1.set_xlabel('%s' % (param_label))
-            ax1.set_ylabel('Avg Fitness +/- Std Dev', color=color)
+            ax1.set_ylabel('Avg Fitness +/- Std', color=color)
             ax1.plot(x, means, linewidth=LINE_WIDTH, markersize=LINE_WIDTH, color=color)
             ax1.fill_between(x, means + stds, means - stds, alpha=0.15, color=color)
             ax1.tick_params(axis='y', labelcolor=color)
+            ax1.tick_params(axis='x', which='major', labelsize=12)
             ax1.set_ylim([0, max(means+stds) * 1.03])
 
             ax2 = ax1.twinx()
             color = 'tab:blue';
-            ax2.set_ylabel('Count of Function Calls', color=color)
+            ax2.set_ylabel('Thousands of Function Calls', color=color)
             ax2.plot(x, fn_means, linewidth=LINE_WIDTH, markersize=LINE_WIDTH, color=color)
             ax2.fill_between(x, fn_means + fn_stds, fn_means - fn_stds, alpha=0.15, color=color)
             ax2.tick_params(axis='y', labelcolor=color)
@@ -190,11 +193,13 @@ def run_fitness_over_param_grid(length, algorithm):
 
             plt.grid()
             plt.xscale(scale)
+            plt.xticks(fontsize=12)
             plt.gcf().set_size_inches(FIG_WIDTH, FIG_HEIGHT)
             plt.savefig('tuning_plots/%s_%s_%s.png' % (problem.name, algorithm.name, param_label), bbox_inches='tight')
             plt.close()
 
         param_ax1.axvline(x=best_value, linestyle='--', linewidth=1, color='black')
+        param_ax1.tick_params(axis='x', which='major', labelsize=12)
         param_ax1.set_ylim(bottom=0.5)
         #param_ax1.tick_params(axis='y')
         param_ax2.set_ylim(bottom=0)
@@ -206,6 +211,7 @@ def run_fitness_over_param_grid(length, algorithm):
         param_ax2.set_frame_on(True)
         plt.figure(param_fig.number)
         plt.xscale(scale)
+        #plt.xticks(fontsize=14)
         plt.gcf().set_size_inches(FIG_WIDTH, FIG_HEIGHT)
         plt.savefig('tuning_plots/%s_%s.png' % (algorithm.name, param_label), bbox_inches='tight')
         plt.close()
@@ -244,16 +250,16 @@ def simple_bar_chart(labels, data, err, text_format='%1.2f', **kwargs):
 
 def run_algorithm(problem, algorithm):
     print(problem.name, algorithm.name)
-    x_fn, x_iter, iters = run_fitness_by_iteration(problem, DEFAULT_LENGTH, algorithm)
+    x_fn, x_iter, iters = run_fitness_by_iteration(problem, problem.length, algorithm)
     x, fitnesses, fn_calls, timings = run_fitness_by_length(problem, algorithm)
     return {
             "algorithm": algorithm,
-            "x_fn": x_fn,
+            "x_fn": np.array(x_fn) / 1000.0,
             "x_iter": x_iter,
             "iters": iters,
             "x": x,
             "fitnesses": fitnesses,
-            "fn_calls": fn_calls,
+            "fn_calls": np.array(fn_calls) / 1000.0,
             "timings": timings,
             }
 
@@ -279,11 +285,11 @@ if __name__ == "__main__":
 
         fig_num += 1
         fn_fig = plt.figure(fig_num)
-        plt.title('Fitness by Function Calls for %s (length=%s)' % (problem.name, DEFAULT_LENGTH))
+        plt.title('Fitness by Function Calls for %s (length=%s)' % (problem.name, problem.length))
 
         fig_num += 1
         iter_fig = plt.figure(fig_num)
-        plt.title('Fitness by Iterations for %s (length=%s)' % (problem.name, DEFAULT_LENGTH))
+        plt.title('Fitness by Iterations for %s (length=%s)' % (problem.name, problem.length))
 
         print("Starting %s" % (problem.name))
         # https://medium.com/@mjschillawski/quick-and-easy-parallelization-in-python-32cb9027e490
@@ -328,31 +334,31 @@ if __name__ == "__main__":
         fig_num += 1
         plt.figure(fig_num)
         simple_bar_chart(bar_labels, bar_timings, bar_stds)
-        plt.title('Convergence time %s' % (problem.name))
-        plt.ylabel('Algorithm')
+        plt.title('Convergence time for %s' % (problem.name))
+        #plt.ylabel('Algorithm')
         plt.xlabel('Time (s)')
         plt.gcf().set_size_inches(FIG_WIDTH, FIG_HEIGHT)
         plt.savefig('plots/%s_%s.png' % (problem.name, 'convergence_times'), bbox_inches='tight')
         plt.close()
 
-        fitness_fig.gca().set_ylabel('Avg Fitness +/- Std Dev')
+        fitness_fig.gca().set_ylabel('Avg Fitness +/- Std')
         fitness_fig.gca().set_xlabel('Problem length')
-        funcall_fig.gca().set_ylabel('Count of Function Calls +/- Std Dev')
+        funcall_fig.gca().set_ylabel('Thousands of Function Calls +/- Std')
         funcall_fig.gca().set_xlabel('Problem length')
-        fn_fig.gca().set_ylabel('Avg Fitness +/- Std Dev')
-        fn_fig.gca().set_xlabel('Count of Function Calls')
-        iter_fig.gca().set_ylabel('Avg Fitness +/- Std Dev')
+        fn_fig.gca().set_ylabel('Avg Fitness +/- Std')
+        fn_fig.gca().set_xlabel('Thousands of Function Calls')
+        iter_fig.gca().set_ylabel('Avg Fitness +/- Std')
         iter_fig.gca().set_xlabel('Count of Iterations')
         for fig in [fitness_fig, funcall_fig, iter_fig, fn_fig]:
             plt.figure(fig.number)
             plt.grid()
-            #plt.ylabel('Avg Score +/- Std Dev')
+            #plt.ylabel('Avg Score +/- Std')
             #plt.ylim([0, max_fitness * 1.03])
             plt.legend()
-            fig.set_size_inches(FIG_WIDTH, FIG_HEIGHT)
+            fig.set_size_inches(6, 3)
             fig.savefig('plots/%s_%s.png' % (problem.name, fig.gca().get_title()), bbox_inches='tight')
             plt.close()
 
     for algorithm in ALGORITHMS:
-        run_fitness_over_param_grid(DEFAULT_LENGTH, algorithm)
+        run_fitness_over_param_grid(problem.length, algorithm)
 

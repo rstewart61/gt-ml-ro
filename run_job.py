@@ -92,11 +92,11 @@ genetic_grid = {
         }
 
 mimic_grid = {
-        #'keep_pct': (np.logspace(-2, -0.01, 20), 'log'),
-        'pop_size': (range(50, 751, 50), 'linear'),
         #'keep_pct': (np.linspace(0.1, 0.9, 20), 'linear'),
+        #'keep_pct': (np.logspace(-2, -0.01, 20), 'log'),
         'keep_pct': (np.linspace(0.05, 0.95, 19), 'linear'),
-        'max_attempts': (range(1, 51, 2), 'linear'),
+        'max_attempts': (range(1, 21, 2), 'linear'),
+        'pop_size': (range(50, 751, 50), 'linear'),
         }
 
 ALGORITHMS = [
@@ -108,7 +108,7 @@ ALGORITHMS = [
     Algorithm('GA', mlrose.genetic_alg, genetic_grid, max_iters=MAX_ITERS/250,
               max_attempts=40, pop_size=200, mutation_prob=0.1),
     Algorithm('MIMIC', mlrose.mimic, mimic_grid, max_iters=MAX_ITERS/350, keep_pct=0.20,
-              max_attempts=40, pop_size=700),
+              max_attempts=15, pop_size=700),
 ]
 
 def four_peaks(length=50):
@@ -160,10 +160,11 @@ class FitnessCounter:
         return self.fitness_fn.get_prob_type()
 
 class Fitness:
-    def __init__(self, name, fn, opt):
+    def __init__(self, name, fn, opt, length):
         self.name = name
         self.fn = fn
         self.opt = opt
+        self.length = length
 
     def get_count(self):
         return self.fitness.n_evaluations
@@ -197,9 +198,9 @@ def instance(problem, length):
 
 
 FITNESS_FNS = [
-    Fitness('Traveling Sales', 'travelling_sales', mlrose.TSPOpt),
-    Fitness('Max K-Color', 'max_k_color', mlrose.DiscreteOpt),
-    Fitness('Continuous Peaks', 'continuous_peaks', mlrose.DiscreteOpt),
+    Fitness('Traveling Sales', 'travelling_sales', mlrose.TSPOpt, 50),
+    Fitness('Max K-Color', 'max_k_color', mlrose.DiscreteOpt, 50),
+    Fitness('Continuous Peaks', 'continuous_peaks', mlrose.DiscreteOpt, 50),
     #Fitness('Four Peaks', 'four_peaks', mlrose.DiscreteOpt),
     #Fitness('Knapsack', 'knapsack', mlrose.DiscreteOpt),
     #Fitness('Six Peaks', six_peaks, mlrose.DiscreteOpt),
